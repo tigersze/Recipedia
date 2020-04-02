@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="Min.css">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="icon" type="image/JPG" href="../img/logo.JPG">
+        
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+        <!-- Optional JavaScipt -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+        <title>Sign Up</title>
+    </head>
+    <style>
+        .retract{
+            height: 		0px;
+            padding-top: 	0;
+            padding-bottom: 0;
+            margin-top: 	0;
+            margin-bottom:  0;
+            opacity:  		0;
+        }
+    </style>
+
+
+    <body>        
+        <!-- Sign up box -->
+        <div class="window" style="background-color: white">
+            <div class="container small">
+                <div class="mr d12 screen h5 y3 h-auto border-5 elevate-8 fit" style="background-color: white">
+                    <div class="mr d12 screen h5 h-aut  o">
+                        <div class="text-bucket huge align-center mr h-auto" style="background-color: white; color: dimgrey" >
+                            Sign Up
+                        </div>
+                        <div class="mr d12 screen h1">
+                            <div class="mc d12 w1">
+                                <i class="material-icons center" style="color: #777777">email</i>
+                            </div>
+                            <div class="input-bucket mc d12 w10">
+                                <input id="input-email" type="email" class="border-3" onfocusout="validateEmail()" style="position: absolute" placeholder="E-mail">
+                            </div>
+                        </div>
+                        <div id="email-validate-warning" class="list retract" style="background-color: #FF0008; color: white">
+                            <b>Invalid format for email, it should be xxx@xxx.com</b>
+                        </div>
+                        <div id="email-duplicate-warning" class="list retract" style="background-color: #FF0008; color: white">
+                            <b>This username is occupied!</b>
+                        </div>
+                        <div class="mr d12 screen h1">
+                            <div class="mc d12 w1">
+                                <i class="material-icons center" style="color: #777777">lock</i>
+                            </div>
+                            <div class="input-bucket mc d12 w10">
+                                <input id="input-password" type="password" class="border-3" onfocusout="validatePassword()" style="position: absolute;" placeholder="Password">
+                            </div>
+                        </div>
+                        <div class="mr d12 screen h1">
+                            <div class="mc d12 w1">
+                                <i class="material-icons center" style="color: #777777">lock</i>
+                            </div>
+                            <div class="input-bucket mc d12 w10">
+                                <input id="input-password-repeat" type="password" class="border-3" onfocusout="validatePassword()" style="position: absolute" placeholder="Repeat password">
+                            </div>
+                        </div>
+                            <div id="password-validate-warning" class="list retract" style="background-color: white; color: rgba(255,0,8,0.76);" >
+                            <b>&nbsp&nbsp The passwords does not match. </b>
+                        </div>
+                        <div class="mr d12 screen h1">
+                            <div class="mc d12 w3 x2">
+                                <a id="sign_up" class="text-bucket small align-left" style="color: dimgrey;cursor: pointer; font-size: 14px " onclick="location.href='../Login/Login.html'"><u>Already have a user?</u>     </a>
+                            </div>
+                            <div class="mc d12 w3 x2">
+                                <button id="submit" class="button d12 w12 elevate-5 center animative" style="background-color: #28A745; color:rgb(255, 255, 255)">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        //
+        var input_email = document.getElementById('input-email');
+        var input_password = document.getElementById('input-password');
+        var input_password_repeat = document.getElementById('input-password-repeat');
+        var button_submit = document.getElementById('submit');
+
+        var email_validate_warning = document.getElementById('email-validate-warning');
+        var email_duplicate_warning = document.getElementById('email-duplicate-warning');
+        var password_validate_warning = document.getElementById('password-validate-warning');
+
+        var email_valid = false;
+        var password_valid = false;
+
+        function AJAXPost(url, formData, onReadyStateHandler){
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function(){
+                if(this.readyState == 4 && this.status == 200){
+                    onReadyStateHandler(JSON.parse(this.responseText));
+                }  
+            }
+            xhr.open('POST', url, true);
+            xhr.send(formData);
+        }
+
+        function validateEmail(){
+            var formData = new FormData();
+            formData.append('email', input_email.value);
+            AJAXPost(
+                'http://localhost/Miniproject/Recipedia/sign_up/validate_email.php',
+                formData,
+                function(response){
+                    console.log(response)
+                    email_valid = response.singular == 0;
+                    if(response.singular == 0)
+                        email_duplicate_warning.classList.add('retract');
+                    else
+                        email_duplicate_warning.classList.remove('retract');
+                        var format_valid = input_email.checkValidity();
+                    if(!format_valid)
+                        email_validate_warning.classList.remove('retract');
+                    else
+                        email_validate_warning.classList.add('retract');
+
+                    email_valid &= format_valid;
+                    enableSubmit();
+                }
+            );
+        }
+
+        function validatePassword(){
+            if(input_password.value != input_password_repeat.value){
+                password_validate_warning.classList.remove('retract');
+                password_valid = false;
+            }else{
+                password_validate_warning.classList.add('retract');
+                password_valid = true;
+            }
+            enableSubmit();
+        }
+
+        function enableSubmit(){
+            if(email_valid && password_valid)
+                button_submit.style.backgroundColor = '#28A745';
+            else
+                button_submit.style.backgroundColor = '#888 888';
+        }
+
+        button_submit.onclick = function(){
+            validateEmail();
+            validatePassword();
+            if(!password_valid || !email_valid)
+                return;
+            var formData = new FormData();
+            formData.append('email', input_email.value);
+            formData.append('password', input_password.value);
+            AJAXPost(
+                'http://localhost/Miniproject/Recipedia/sign_up/sign_up.php',
+                formData,
+                function(response){
+                    console.log(response);
+                }
+            )
+        }        
+    </script>
+</html>

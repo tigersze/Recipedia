@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="../css/Min.css">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    </head>
+    <style>
+        tmp{
+            display: none;
+        }
+        .margin{
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .tag{
+            float: left;
+            margin: 2px;
+            padding: 2px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .nav-element{
+            float: right;
+        }
+        .blur{
+            -webkit-filter: blur(30px); 
+            -moz-filter: blur(30px);
+            -o-filter: blur(30px); 
+            -ms-filter: blur(30px); 
+            filter: url(#blur); 
+            filter: blur(30px);  
+            filter:progid:DXImageTransform.Microsoft.Blur(PixelRadius='3');
+            -webkit-transition: 2s -webkit-filter linear;
+            -o-transition: 2s -o-filter linear;
+            transition: 2s -o-filter linear;
+        }
+    </style>
+    <tmp>
+
+        <div id="sub" class="window elevate-9" style="background-color: rgba(0, 0, 0, 0.7);">
+            <div class="container small">
+                <div id="subDisplay" class="mg d20 w19 screen h18 center border-5" style="background-color: white;">
+                </div>
+            </div>
+        </div>
+
+        <div 
+            id="recipeCard" 
+            class="mg d20 w18 x1 screen h10 h-auto margin elevate-3 border-2" 
+            style="overflow: hidden;">
+            <div 
+                id="imageField" 
+                class="mr d12 screen h7"
+                style="
+                    background-color: #EEE;
+                    border-bottom: 1px solid #EEEEEE;">
+                <div 
+                    id="imageBucket" 
+                    class="media-bucket mr d20 h19 v-center">
+                    <img id="image">
+                </div>
+            </div>
+            <div 
+                id="bottomBar" 
+                class="mr d12 screen h1" 
+                style="border-bottom: 1px solid #EEEEEE;">
+                <div 
+                    id="textColumn" 
+                    class="mc d12 w8">
+                    <div 
+                        id="textField" 
+                        class="text-bucket huge d12 x1 v-center">
+                    </div>
+                </div>
+                <div 
+                    id="likeButton" 
+                    class="mc d12 w2">
+                    <i 
+                        id="likeButtonIcon" 
+                        class="material-icons center"
+                        style="
+                            font-size: 36px; 
+                            color: #BBB;
+                            cursor: pointer;">
+                        thumb_up_alt
+                    </i>
+                </div>
+                <div 
+                    id="dislikeButton" 
+                    class="mc d12 w2">
+                    <i 
+                        id="dislikeButtonIcon" 
+                        class="material-icons center"
+                        style="
+                            font-size: 36px; 
+                            color: #BBB;
+                            cursor: pointer">
+                        thumb_down_alt
+                    </i>
+                </div>
+            </div>
+            <div 
+                id="tagsBar" 
+                class="mr d20 screen h1 h-auto">
+                <div 
+                    id="tagsList" 
+                    class="mc d15 w14 h-center">
+                </div>
+            </div>
+        </div>
+
+    </tmp>
+    <body>
+        <div id="main" class="window">
+            <div id="nav-bar" class="mr d20 screen h2 elevate-4">
+                <div class="media-bucket mc d20 w2">
+                    <img id="user-image">
+                </div>
+                <div id="settings-button" name="nav" class="mc d20 w3 nav-element">
+                    <div class="text-bucket medium center">
+                        <b>Settings</b>
+                    </div>
+                </div>
+                <div id="upload-button" name="nav" class="mc d20 w3 nav-element">
+                    <div class="text-bucket medium center">
+                        <b>Upload</b>
+                    </div>
+                </div>
+                <div id="search-button" name="nav" class="mc d20 w3 nav-element">
+                    <div class="text-bucket medium center">
+                        <b>Search</b>
+                    </div>
+                </div>
+                <div id="recipes-button" name="nav" class="mc d20 w3 nav-element">
+                    <div class="text-bucket medium center">
+                        <b>Recipes</b>
+                    </div>
+                </div>
+            </div>
+            <div class="mr d20 screen h18">
+                <div id="display" class="container small animative">
+                    
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+
+        //Global Initialization
+        //*******************************************************************//
+        var templateCollections = {};
+
+        var navBar = document.getElementById('nav-bar');
+        var recipesButton = document.getElementById('recipes-button');
+        var searchButton = document.getElementById('search-button');
+        var uploadButton = document.getElementById('upload-button');
+        var settingsButton = document.getElementById('settings-button');
+
+        var displayContainer = document.getElementById('display');
+
+        var searchField = document.createElement('DIV');
+        var recipeList = document.createElement('DIV');
+        var recipeUploadField = document.createElement('DIV');
+        var recipeInfoField = document.createElement('DIV');
+        var settingsField = document.createElement('DIV');
+
+        var recipeCardsBuffer = [];
+         //*******************************************************************//
+
+        //Create transistion effect for display update
+        function refreshDisplayAnimation(refreshHandler){
+            displayContainer.style.opacity = '0';
+            setTimeout(
+                function(){
+                    refreshHandler();
+                    displayContainer.style.opacity = '1';
+                },
+                200
+            );
+        }
+
+        function utilLoadTemplate(){
+            var templateField = document.getElementsByTagName('tmp')[0];
+            var templates = templateField.childNodes;
+            var template; for(template of templates)
+                if(template.nodeType == 1)
+                    templateCollections[template.id] = template;
+            document.getElementsByTagName('body')[0].removeChild(templateField);
+        }
+
+        function utilFetchTemplate(templateID){
+            return templateCollections[templateID].cloneNode(true);
+        }
+
+        //This function is used for handling select event of a selection set with common name
+        //When the selectedHandler will be applied to the clicked element
+        //The outsiderHandler will be applied to the rest of the elements
+        //This function is created to handler nav-bar selections
+        //Can be used to implement a custom radio button or checkbox field
+        function utilInjectHandlerToNameSelectionSet(name, selectedHandler, outsiderHandler){
+            var nameSet = document.getElementsByName(name);
+            var setElement; for(setElement of nameSet){
+                setElement.siblings = [];
+                var elem; for(elem of nameSet)
+                    if(!elem.isEqualNode(setElement))
+                        setElement.siblings.push(elem);
+                setElement.onclick = function(){
+                    selectedHandler(this);
+                    var outsider; for(outsider of this.siblings)
+                        outsiderHandler(outsider);
+                }
+            }
+        }
+
+        //Universal function for creating a displayContainer
+        //fitting field cards for a htmlElement
+        function utilCreateField(htmlElement){
+            htmlElement.className = 'mr d12 screen h10 margin';
+            // htmlElement.classList.add('mr');
+            // htmlElement.classList.add('d12');
+            // htmlElement.classList.add('screen');
+            // htmlElement.classList.add('h10');
+            // htmlElement.classList.add('margin');
+
+            var horiContainer = document.createElement('DIV');
+            horiContainer.className = 'mc d20 w18 x1 elevate-3 scroll';
+            // horiContainer.classList.add('mc');
+            // horiContainer.classList.add('d20');
+            // horiContainer.classList.add('w18');
+            // horiContainer.classList.add('x1');
+            // horiContainer.classList.add('elevate-3');
+            // horiContainer.classList.add('scroll');
+
+            htmlElement.scrollPosition = 0;
+
+            htmlElement.appendChild(horiContainer);
+            return htmlElement.childNodes[0];
+        }
+
+        function utilAddTagToElement(element, tagName, color){
+            var tag = document.createElement('DIV');
+            tag.classList.add('tag');
+            tag.innerHTML = tagName;
+            tag.style.color = color;
+            tag.style.border = '2px solid ' + color;
+            element.appendChild(tag);
+        }
+
+        function initialiseNavBar(){
+            recipesButton.style.cursor = 'pointer';
+            searchButton.style.cursor = 'pointer';
+            uploadButton.style.cursor = 'pointer';
+            settingsButton.style.cursor = 'pointer';
+
+            recipesButton.classList.add('animative');
+            searchButton.classList.add('animative');
+            uploadButton.classList.add('animative');
+            settingsButton.classList.add('animative');
+
+            recipesButton.associatedElement = recipeList;
+            searchButton.associatedElement = searchField;
+            uploadButton.associatedElement = recipeUploadField;
+            settingsButton.associatedElement = settingsField;
+
+            utilInjectHandlerToNameSelectionSet(
+                'nav',
+                function(elem){
+                    elem.style.backgroundColor = '#00DAA7';
+                    elem.style.color = '#FFFFFF';
+                    updateDisplayPage(elem.associatedElement);
+                },
+                function(elem){
+                    elem.style.backgroundColor = '#FFFFFF';
+                    elem.style.color = '#4D4D4D';
+                }
+            );
+        }
+
+        //Initialise the searchField element
+        function createSearchField(){
+            var field = utilCreateField(searchField);
+            field.innerHTML = "SEARCH";
+        }
+
+        //Initialise the recipeList
+        function createRecipeList(){
+            recipeList.classList.add('mg');
+            recipeList.style.overflowY = 'scroll';
+            recipeList.scrollPosition = 0;
+        }
+
+        function createRecipeUploadField(){
+            var field = utilCreateField(recipeUploadField);
+        }
+
+        function createRecipeInfoField(){
+            var field = utilCreateField(recipeInfoField);
+        }
+
+        function createSettingsField(){
+            var field = utilCreateField(settingsField);
+        }
+
+        //Add a new recipe element to the recipeListBuffer
+        function createRecipeCards(count){
+            var i; for(i = 0; i < count; i++){
+                // var container = document.createElement('DIV');
+                // container.className = 'mg d20 w18 x1 screen h10 h-auto margin elevate-3 border-2';
+                // // container.classList.add('mg');
+                // // container.classList.add('d20');
+                // // container.classList.add('w18');
+                // // container.classList.add('x1');
+                // // container.classList.add('screen');
+                // // container.classList.add('h10');
+                // // container.classList.add('h-auto');
+                // // container.classList.add('margin')
+                // // container.classList.add('elevate-3');
+                // // container.classList.add('border-2');
+                // container.style.overflow = 'hidden';
+
+                // var imageField = document.createElement('DIV');
+                // imageField.className = 'mr d12 screen h7';
+                // // imageField.classList.add('mr');
+                // // imageField.classList.add('d12');
+                // // imageField.classList.add('screen');
+                // // imageField.classList.add('h7');
+                // imageField.style.backgroundColor = '#EEE';
+                // imageField.style.borderBottom = '1px solid #EEEEEE';
+
+                // var imageBucket = document.createElement('DIV');
+                // imageBucket.className = 'media-bucket mr d20 h19 v-center';
+                // // imageBucket.classList.add('media-bucket');
+                // // imageBucket.classList.add('mr');
+                // // imageBucket.classList.add('d15');
+                // // imageBucket.classList.add('h12');
+                // // imageBucket.classList.add('v-center');
+
+                // var image = document.createElement('IMG');
+
+                // var bottomBar = document.createElement('DIV');
+                // bottomBar.className = 'mr d12 screen h1';
+                // // bottomBar.classList.add('mr');
+                // // bottomBar.classList.add('d12');
+                // // bottomBar.classList.add('screen');
+                // // bottomBar.classList.add('h1');
+                // bottomBar.style.borderBottom = '1px solid #EEEEEE';
+
+                // var bottomBarTextColumn = document.createElement('DIV');
+                // bottomBarTextColumn.className = 'mc d12 w8';
+                // // bottomBarTextColumn.classList.add('mc');
+                // // bottomBarTextColumn.classList.add('d12');
+                // // bottomBarTextColumn.classList.add('w8');
+
+                // var bottomBarTextField = document.createElement('DIV');
+                // bottomBarTextField.className = 'text-bucket huge d12 x1 v-center';
+                // // bottomBarTextField.classList.add('text-bucket');
+                // // bottomBarTextField.classList.add('huge');
+                // // bottomBarTextField.classList.add('d12');
+                // // bottomBarTextField.classList.add('x1');
+                // // bottomBarTextField.classList.add('v-center');
+
+                // var bottomBarLikeIcon = document.createElement('I');
+                // bottomBarLikeIcon.className = 'material-icons center';
+                // // bottomBarLikeIcon.classList.add('material-icons');
+                // // bottomBarLikeIcon.classList.add('center');
+                // bottomBarLikeIcon.style.fontSize = '36px';
+                // bottomBarLikeIcon.style.color = '#BBBBBB';
+                // bottomBarLikeIcon.innerHTML = 'thumb_up_alt';
+
+                // var bottomBarDisLikeIcon = document.createElement('I');
+                // bottomBarDisLikeIcon.className = 'material-icons center';
+                // // bottomBarDisLikeIcon.classList.add('material-icons');
+                // // bottomBarDisLikeIcon.classList.add('center');
+                // bottomBarDisLikeIcon.style.fontSize = '36px';
+                // bottomBarDisLikeIcon.style.color = '#BBBBBB';
+                // bottomBarDisLikeIcon.innerHTML = 'thumb_down_alt';
+                
+                // var bottomBarLikeButton = document.createElement('DIV');
+                // bottomBarLikeButton.className = 'mc d12 w2';
+                // // bottomBarLikeButton.classList.add('mc');
+                // // bottomBarLikeButton.classList.add('d12');
+                // // bottomBarLikeButton.classList.add('w2');
+                // bottomBarLikeButton.style.cursor = 'pointer';
+
+                // bottomBarLikeButton.onclick = function(){
+                //     var dishID  = 
+                //         this.parentElement
+                //             .parentElement
+                //             .dishID;
+                //     //AJAX Post (userID, dishID, Like)
+                //     alert('like:' + dishID);
+                // }
+
+                // var bottomBarDisLikeButton = document.createElement('DIV');
+                // bottomBarDisLikeButton.className = 'mc d12 w2';
+                // // bottomBarDisLikeButton.classList.add('mc');
+                // // bottomBarDisLikeButton.classList.add('d12');
+                // // bottomBarDisLikeButton.classList.add('w2');
+                // bottomBarDisLikeButton.style.cursor = 'pointer';
+
+                // bottomBarDisLikeButton.onclick = function(){
+                //     var dishID  = 
+                //         this.parentElement
+                //             .parentElement
+                //             .dishID;
+                //     //AJAX Post (userID, dishID, Like)
+                //     alert('dislike:' + dishID);
+                // }
+
+                // var tagsBar = document.createElement('DIV');
+                // tagsBar.className = 'mr d20 screen h1 h-auto';
+                // // tagsBar.classList.add('mr');
+                // // tagsBar.classList.add('d20');
+                // // tagsBar.classList.add('screen');
+                // // tagsBar.classList.add('h1');
+                // // tagsBar.classList.add('h-auto');
+
+                // var tagsList = document.createElement('DIV');
+                // tagsList.className = 'mc d15 w14 h-center';
+                // // tagsList.classList.add('mc');
+                // // tagsList.classList.add('d15');
+                // // tagsList.classList.add('w14');
+                // // tagsList.classList.add('h-center');
+                
+                // bottomBarTextColumn.appendChild(bottomBarTextField);
+                // bottomBarLikeButton.appendChild(bottomBarLikeIcon);
+                // bottomBarDisLikeButton.appendChild(bottomBarDisLikeIcon);
+                // bottomBar.appendChild(bottomBarTextColumn);
+                // bottomBar.appendChild(bottomBarLikeButton);
+                // bottomBar.appendChild(bottomBarDisLikeButton);
+
+                // imageBucket.appendChild(image);
+                // imageField.appendChild(imageBucket);
+
+                // tagsBar.appendChild(tagsList);
+                
+                // container.appendChild(imageField);
+                // container.appendChild(bottomBar);
+                // container.appendChild(tagsBar);
+
+                var container = utilFetchTemplate('recipeCard');
+                var likeButton = container.children[1].children[1];
+                var dislikeButton = container.children[1].children[2];
+                likeButton.onclick = function(){
+                    var dishID  = 
+                        this.parentElement
+                            .parentElement
+                            .dishID;
+                    //AJAX Post (userID, dishID, Like)
+                    alert('like:' + dishID);
+                }
+                dislikeButton.onclick = function(){
+                    var dishID  = 
+                        this.parentElement
+                            .parentElement
+                            .dishID;
+                    //AJAX Post (userID, dishID, Like)
+                    alert('like:' + dishID);
+                }
+                recipeCardsBuffer.push(container);
+            }
+        }
+
+        function renderRecipeList(recipes, renderCount){
+            recipeList.innerHTML = "";
+            var i; for(i = 0; i < renderCount; i++){
+                var recipe = recipes[i];
+                var container = recipeCardsBuffer[i];
+                container.dishID = recipe.dishID;
+                var imageField = container.children[0];
+                var bottomBar = container.children[1];
+                var tagBar = container.children[2];
+                var titleTextField = bottomBar.children[0].children[0];
+                //add in like and displike
+                titleTextField.innerHTML = recipe.title;
+
+                imageField.children[0].children[0].src = recipe.imgUrl ? recipe.imgUrl : '';
+
+                var tag; for(tag of recipe.tags)
+                    utilAddTagToElement(tagBar.children[0], tag.name, tag.color);
+
+                recipeList.appendChild(container);
+            }
+        }
+
+        function updateDisplayPage(newPageElement){
+            refreshDisplayAnimation(function(){
+                var currentNode = displayContainer.childNodes[0];
+                currentNode.scrollPosition = currentNode.scrollTop;
+                displayContainer.innerHTML = "";
+                displayContainer.appendChild(newPageElement);
+                newPageElement.scrollTop = newPageElement.scrollPosition;
+            });
+        }
+
+        //Scripting Starts Here
+        utilLoadTemplate();
+        initialiseNavBar();
+        createSearchField();
+        createRecipeList();
+        createRecipeInfoField();
+        createRecipeUploadField();
+        createSettingsField();
+        createRecipeCards(10);
+
+        renderRecipeList(
+            [
+                {dishID: 0, title: "Scrambled Eggs", tags : [{name:'Beef', color:'lightblue'}], imgUrl : 'https://www.thespruceeats.com/thmb/TyflISuULW9eX8K_mj7whZWfODM=/960x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/super-easy-bread-for-beginners-428108-14_preview-5aff40a26bf06900366f617b.jpeg'},
+                {dishID: 1, title: "Scrambled Eggs", tags : [{name:'Beef', color:'lightblue'}], imgUrl : 'https://www.thespruceeats.com/thmb/TyflISuULW9eX8K_mj7whZWfODM=/960x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/super-easy-bread-for-beginners-428108-14_preview-5aff40a26bf06900366f617b.jpeg'},
+                {dishID: 3, title: "Crab Eggs", tags : [{name:'Crab', color:'pink'}], imgUrl : 'https://www.thespruceeats.com/thmb/TyflISuULW9eX8K_mj7whZWfODM=/960x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/super-easy-bread-for-beginners-428108-14_preview-5aff40a26bf06900366f617b.jpeg'}
+            ], 3);
+
+        recipesButton.onclick();
+
+    </script>
+</html>

@@ -1,0 +1,815 @@
+/**
+ *MinVirtualDOM.js beta build 0.2.0
+ *Authored 2019 Chan Hing Nin Harry (Alphaharrius)
+ *Description
+ *Implementation of Shallow Virtual DOM Algorithm
+ *Shallow Virtual DOM does not have a node tree
+ *with child nodes as sub properties of parent node,
+ *instead uses index referencing to trace relations
+ *and the HTMLElement associated to the virtual node.
+ *The rendering method of this Virtual DOM Algorithm
+ *is a difference trace rendering pipeline including 
+ *an overlapping optimisation to prevent redundant
+ *or repeative rendering operations. Trace rendering
+ *made use of a pre-referenced trace of the HTMLElement
+ *linked to the virtual node, updates can be made
+ *directly instead of looking up the actual DOM.
+ *New in 0.2.0
+ *This version is nearly a completely rewrite of the
+ *previous version 0.1.x, to apply a newer virtual DOM
+ *algorithm called the Parallel Shallow Virtual DOM,
+ *This algorithm ensured both render and virtual DOM 
+ *contains the same nodes, the only difference is the
+ *properties, DOM patching will be carried out by
+ *comparing these properties, the advantage of this
+ *algorithm is, when both DOM carries the same nodes,
+ *we can just run iterative check once to finish the
+ *procedure, render DOM can be updated at the process,
+ *without the need of a deep clone at wrap up stage.
+ *At the same time, element attributes and properties
+ *can also e updated during the iterative check,
+ *thus speeds up the overall computation.
+ *The overall benchmark shows a 10x performance
+ *boost in the initial render, and 5x boost on
+ *average in all operations, with half the memory
+ *allocation, when comparing to v0.1.x
+ */
+
+(function(global, factory){ global.MinVDOM = factory(); global.MinVDOM.version = '0.2.0';})
+(this, function(){
+
+    //Syntax Style:
+    //  [Objects] => $OBJECT_NAME
+    //  [Arrays] => ARRAY_NAMEs
+    //  [Variables] => VAR_NAME
+    //  [Util Functions] => FUNCTION_NAME()
+    //  [Function Objects] => $$FUNCTION_NAME()
+
+    //Util Functions
+    //According to experienced programmer, 
+    //using these utils will help compiler
+    //generates better vm code.
+
+    //Check is variable is defined
+    function isDef(v){
+        return v !== null && v !== undefined;
+    }
+
+    //Check if variable is undefined
+    function isUnDef(v){
+        return v !== null && v === undefined;
+    }
+
+    //CHeck is variable is Object
+    function isObject(v){
+        return v !== null && typeof v === 'object';
+    }
+
+    var $$push = Array.prototype.push;
+    function push($arr, val){
+        return $$push.call($arr, val);
+    }
+
+    //Remove an element from array by value,
+    //only the first match will be removed
+    function remove (arr, item) {
+        if (arr.length) {
+            var index = arr.indexOf(item);
+            if (index > -1)
+                return arr.splice(index, 1);
+        }
+    }
+
+    var $$keys = Object.keys;
+    function keys($object){
+        return $$keys.call(null, $object);
+    }
+
+    //Cloning of JSON object by recursive function,
+    //all layers of the object will be cloned, when
+    //the order of properties within object type might
+    //change, the element order of array type will not
+    //be affected, thus it is safe to use.
+    //Some types of data might be mutated during the
+    //process, but the main use of this function is
+    //for cloning nodes, thus it is safe to use.
+    function deepClone($object){
+        var $clone = {};
+        function clone($0, $1){
+            var props = keys($0);
+            var propsSize = props.length;
+            var i; for(i = 0; i < propsSize; i++){
+                var prop = props[i];
+                var val0 = $0[prop];
+                if(!isObject(val0)){
+                    $1[prop] = val0;
+                    continue;
+                }
+                $1[prop] = Array.isArray(val0) ? [] : {};
+                clone($0[prop], $1[prop]);
+            }
+        }
+        clone($object, $clone);
+        return $clone;
+    }
+
+    //DOM API
+    var elProto = HTMLElement.prototype;
+    var $$appendChild = elProto.appendChild;
+    var $$removeChild = elProto.removeChild;
+
+    function appendChild(el, ch){
+        return $$appendChild.call(el, ch);
+    }
+
+    function removeChild(el, ch){
+        return $$removeChild.call(el, ch)
+    }
+
+    function log(caller, msg){
+        console.log('[MinVDOM, ' + caller + ']: ' + msg);
+    }
+
+    function warn(caller, msg){
+        console.warn('[MinVDOM, ' + caller + ']: ' + msg);
+    }
+
+    //GLOBAL CONSTANTS
+    const VNODE_TYPE_ELEMENT = 1;
+    const VNODE_TYPE_TEXT = 3;
+
+    const VNODE_PARENT_STORE = '#';
+    const VNODE_INDEX_HOST = '#host';
+
+    const ATTRIB_TEXT = 'text';
+    const ATTRIB_STYLE = '$style';
+    //const ATTRIB_CLASS = '$class';
+
+    function injectVirtualNodeInterface(MinVDOM){
+
+        //This util function is not part of the API,
+        //It is used to create a element trace for
+        //the given vnode object
+        function createNodeTrace($vnode){
+            var trace = null;
+            if($vnode.type == VNODE_TYPE_TEXT)
+                trace = document.createTextNode($vnode.$attrib.text);
+            else{
+                trace = document.createElement($vnode.tag);
+                var $attribute = $vnode.$attrib;
+                var attributes = keys($attribute);
+                var len = attributes.length;
+                var i, c, attribute, len$0; for(i = 0; i < len; i++){
+                    attribute = attributes[i];
+                    if(attribute == ATTRIB_STYLE){
+                        var $tsl = trace.style;
+                        var $style = $attribute[attribute];
+                        if(!isObject($style))
+                            return warn('createNodeTrace', '$style must be type of object...');
+                        var style, styles = keys($style);
+                        for(c = 0, len$0 = styles.length; c < len$0; c++){
+                            style = styles[c];
+                            $tsl[style] = $style[style];
+                        }
+                        continue;
+                    }
+                    // if(attribute == ATTRIB_CLASS){
+                    //     var classes = $attribute[attribute];
+                    //     if(!Array.isArray(classes))
+                    //         return warn('createNodeTrace', '$style must be type of array...');
+                    //     var $tcl = trace.classList;
+                    //     for(c = 0, len$0 = classes.length; c < len$0; c++)
+                    //         $tcl.add(classes[c]);
+                    //     continue;
+                    // }
+                    trace.setAttribute(attribute, $attribute[attribute]);
+                }
+                var $property = $vnode.$prop;
+                var properties = keys($property);
+                var len = properties.length;
+                var i, property; for(i = 0; i < len; i++){
+                    property = properties[i];
+                    trace[property] = $property[property];
+                }
+            }
+            return trace;
+        }
+
+        /**
+         * Create a new element node within the virtualDOM
+         * @param {String} tag //This must be a valid HTML tag name
+         * @param {Object} $attributes //Define attributes
+         * @param {Object} $properties //Define Properties
+         */
+        function $$vnode(tag, $attributes, $properties){
+            var vnode = '#' + this.vnCount++;
+            if(isUnDef($attributes))
+                $attributes = {};
+            if(isUnDef($properties))
+                $properties = {};
+            var $vnode = 
+                {
+                    store : true,
+                    type : VNODE_TYPE_ELEMENT,
+                    tag : tag,
+                    $attrib : $attributes,
+                    $prop : $properties,
+                    parent : VNODE_PARENT_STORE,
+                    $children : [],
+                    $descendant : []
+                }
+            this.$vDOM[vnode] = deepClone($vnode);
+            this.$rDOM[vnode] = deepClone($vnode);
+            this.$vnTrace[vnode] = createNodeTrace($vnode);
+            return vnode;
+        }
+
+        /**
+         * Create a new text node within the virtualDOM
+         * @param {String} text //Could be any string
+         */
+        function $$vtext(text){
+            var vnode = '#' + this.vnCount++;
+            var $vnode = 
+                {
+                    store : true,
+                    type : VNODE_TYPE_TEXT,
+                    $attrib : {text : text},
+                    parent : VNODE_PARENT_STORE,
+                }
+            this.$vDOM[vnode] = deepClone($vnode);
+            this.$rDOM[vnode] = deepClone($vnode);
+            this.$vnTrace[vnode] = createNodeTrace($vnode);
+            return vnode;
+        }
+
+        /**
+         * Push a defined vnode to a defined parent node
+         * @param {String} vnode //Format [#VNODE_INDEX]
+         * @param {String} parent //Format [#PARENT_INDEX]
+         */
+        function $$push(vnode, parent){
+            
+            //Prevent repeative referencing
+            var $vDOM = this.$vDOM;
+
+            //The parent argument is not required,
+            //set to host node if not provided
+            if(isUnDef(parent)) 
+                parent = VNODE_INDEX_HOST;
+
+            //Prevent repeative referencing
+            var $vnode = $vDOM[vnode], $parent = $vDOM[parent];
+
+            //Check if vnode and parent exist in the current dom
+            if(isUnDef($vnode) || isUnDef($parent))
+                return warn('push', 'Unidentified node index...');
+
+            //If vnode already been pushed, 
+            //we need to pull it down before pushing
+            if($vnode.parent != VNODE_PARENT_STORE)
+                this.pull(vnode);
+
+            var store = $parent.store;
+            $vnode.store = store;
+
+            //Prevent repeative referencing,
+            //all descendants from vnode will be added
+            //to all root parent nodes
+            var descendants, descCount;
+            if($vnode.type != VNODE_TYPE_TEXT){
+                descendants = $vnode.$descendant;
+                descCount = descendants.length;
+
+                var i; for(i = 0; i < descCount; i++)
+                    $vDOM[descendants[i]].store = store;
+            }else
+                descendants = [], descCount = 0;
+            
+            //Set the parent of vnode to the given parent index
+            $vnode.parent = parent;
+
+            //Push vnode to the children list of parent node
+            push($parent.$children, vnode);
+
+            if(parent == VNODE_INDEX_HOST)
+                return;
+            
+            while(parent != VNODE_INDEX_HOST && parent != VNODE_PARENT_STORE){
+                $parent = $vDOM[parent];
+                push($parent.$descendant, vnode);
+                var i; for(i = 0; i < descCount; i++)
+                    push($parent.$descendant, descendants[i]);
+                parent = $parent.parent;
+            }
+        }
+
+        /**
+         * Pull down a defined vnode from the virtualDOM
+         * @param {String} vnode //Format [#VNODE_INDEX]
+         */
+        function $$pull(vnode){
+
+            //Prevent repeative referencing
+            var $vDOM = this.$vDOM;
+
+            //Prevent repeative referencing
+            var $vnode = $vDOM[vnode];
+
+            //Check if vnode exist in the current dom
+            if(isUnDef($vnode))
+                return warn('pull', 'Unidentified node index...');
+
+            if($vnode.parent == VNODE_PARENT_STORE)
+                return warn('pull', 'Node already in storage, proceed...');
+
+            //Set the store status of vnode to true
+            $vnode.store = true;
+            
+            //Prevent repeative referencing,
+            var parent = $vnode.parent;
+
+            //all descendants from vnode will be removed
+            //from all root parent nodes
+            var descendants, descCount;
+            if($vnode.type != VNODE_TYPE_TEXT){
+                descendants = $vnode.$descendant;
+                descCount = descendants.length;
+            }else
+                descendants = [], descCount = 0;
+
+            //Set all store status of descendants from vnode to true
+            var i; for(i = 0; i < descCount; i++)
+                $vDOM[descendants[i]].store = true;
+            
+            $vnode.parent = '#';
+            
+            var $parent = $vDOM[parent];
+
+            //Remove vnode from the children list of parent node
+            remove($parent.$children, vnode);
+
+            if(parent == VNODE_INDEX_HOST)
+                return;
+
+            while(parent != VNODE_PARENT_STORE && parent != VNODE_INDEX_HOST){
+                $parent = $vDOM[parent];
+                remove($parent.$descendant, vnode);
+                var i; for(i = 0; i < descCount; i++)
+                    remove($parent.$descendant, descendants[i]);
+                parent = $parent.parent;
+            }
+
+        }
+
+        /**
+         * New API allows DOM tree construction using tree diagram
+         *      NODE : [$NODE_INDEX, [[NODE], [NODE], [NODE], ...]]
+         * @param {Array} tree //Specific Format
+         */
+        function $$tree(treeConstruct){
+
+            var pushs = [];
+            var $vDOM = this.$vDOM;
+
+            function parseNodeConstruct(nodeConstruct){
+
+                if(!Array.isArray(nodeConstruct)) 
+                    return 1;
+
+                if(nodeConstruct.length == 1)
+                    return 0;
+
+                var vnode = nodeConstruct[0];
+                if(typeof vnode !== 'string')
+                    return 2;
+                if(isUnDef($vDOM[vnode]))
+                    return 3;
+                
+                if(!Array.isArray(nodeConstruct[1]))
+                    return 1;
+
+                var childConstructs = nodeConstruct[1];
+                var childrenCount = childConstructs.length;
+                var i, child, childConstruct; for(i = 0; i < childrenCount; i++){
+                    childConstruct = childConstructs[i];
+                    child = childConstruct[0];
+                    push(pushs, [child, vnode]);
+                    var stat = parseNodeConstruct(childConstruct)
+                    if(stat != 0)
+                        return stat;
+                }
+
+                return 0;
+                
+            }
+
+            var stat = parseNodeConstruct(treeConstruct);
+            if(stat == 1)
+                return warn('tree', 'Unable to parse, construct body must be type of Array...');
+            if(stat == 2)
+                return warn('tree', 'Unable to parse, node index is not type of String...');
+            if(stat == 3)
+                return warn('tree', 'Unable to parse, the given node does not exist in current dom...');
+            
+            var pushsCount = pushs.length;
+            var i, opr; for(i = 0; i < pushsCount; i++){
+                opr = pushs[i];
+                this.push(opr[0], opr[1]);
+            }
+
+        }
+
+        /**
+         * API for modifying/adding an attribute of the given element node
+         * @param {String} vnode 
+         * @param {String} attribute 
+         * @param {String} value 
+         */
+        function $$attribute(vnode, attribute, value){
+
+            var $vnode = this.$vDOM[vnode];
+
+            if(isUnDef($vnode))
+                return warn('attribute', 'Unidentified node index...');
+            
+            if(
+                attribute == ATTRIB_TEXT || 
+                attribute == ATTRIB_STYLE
+            ) return warn('attribute', 'Forbidden attributes...');
+
+            $vnode.$attrib[attribute] = value;
+
+        }
+
+        /**
+         * API for modifying the text content of the given text node
+         * @param {String} vnode 
+         * @param {String} text 
+         */
+        function $$content(vnode, text){
+
+            var $vnode = this.$vDOM[vnode];
+
+            if(isUnDef($vnode))
+                return warn('content', 'Unidentified node index...');
+
+            if($vnode.type != VNODE_TYPE_TEXT)
+                return warn('content', 'The given node is not a text node...');
+
+            $vnode.$attrib.text = text;
+
+        }
+
+        /**
+         * API for modifying/adding a CSS Style of a element node
+         * @param {String} vnode 
+         * @param {String} style 
+         * @param {String} value 
+         */
+        function $$style(vnode, style, value){
+
+            var $vnode = this.$vDOM[vnode];
+
+            if(isUnDef($vnode))
+                return warn('style', 'Unidentified node index...');
+
+            if($vnode.type == VNODE_TYPE_TEXT)
+                return warn('style', 'The given node is a text node...');
+
+            var $style = $vnode.$attrib.$style;
+            if(isUnDef($style))
+                $vnode.$attrib.$style = $style = {};
+            
+            $style[style] = value;
+
+        }
+
+        /**
+         * API for modifying/adding a property of a element node
+         * @param {String} vnode 
+         * @param {String} property 
+         * @param {*} value 
+         */
+        function $$property(vnode, property, value){
+
+            var $vnode = this.$vDOM[vnode];
+
+            if(isUnDef($vnode))
+                return warn('style', 'Unidentified node index...');
+
+            if($vnode.type == VNODE_TYPE_TEXT)
+                return warn('style', 'The given node is a text node...');
+
+            var $value = value;
+            var check;
+            if(isObject(value))
+                check = 0;
+            if(Array.isArray(value))
+                check = 1;
+            if(check == 1)
+                $value = value.slice(0);
+            if(check == 0)
+                $value = deepClone(value);
+
+            $vnode.$prop[property] = $value;
+
+        }
+
+        MinVDOM.prototype.vnode = $$vnode;
+        MinVDOM.prototype.vtext = $$vtext;
+        MinVDOM.prototype.push = $$push;
+        MinVDOM.prototype.pull = $$pull;
+        MinVDOM.prototype.tree = $$tree;
+        MinVDOM.prototype.attribute = $$attribute;
+        MinVDOM.prototype.content = $$content;
+        MinVDOM.prototype.style = $$style;
+        MinVDOM.prototype.property = $$property;
+
+    }
+
+    function injectRenderMethods(MinVDOM){
+
+        function $$render$ParalellShallow(targets){
+
+            var t1 = performance.now();
+
+            var $vDOM = this.$vDOM;
+            var $rDOM = this.$rDOM;
+            var $vTrace = this.$vnTrace;
+
+            if(isDef(targets)){
+                var $v = {}, $r = {};
+                var targetsCount = targets.length;
+                var i; for(i = 0; i < targetsCount; i++){
+                    var target = targets[i];
+                    var $target = $vDOM[target];
+                    if(isUnDef($target))
+                        return warn('render', 'The given target node does not exist in the current dom...');
+                    var descendants = $target.$descendant;
+                    $v[target] = $target;
+                    $target = $rDOM[target];
+                    $r[target] = $target;
+                    var count = descendants.length;
+                    var c, de, $de; for(c = 0; c < count; c++){
+                        de = descendants[c];
+                        $de = $vDOM[de];
+                        $v[de] = $de;
+                        $de = $rDOM[de];
+                        $r[de] = $de;
+                    }
+                }
+                $vDOM = $v, $rDOM = $r;
+            }
+
+            function vpush(vn){
+                var p = $vDOM[vn].parent;
+                $rDOM[vn].parent = p;
+                appendChild($vTrace[p], $vTrace[vn]);
+            }
+
+            function vpull(vn){
+                var p = $rDOM[vn].parent;
+                $rDOM[vn].parent = VNODE_PARENT_STORE;
+                removeChild($vTrace[p], $vTrace[vn]);
+            }
+
+            var vnodes = keys($vDOM);
+            var vnodesCount = vnodes.length;
+            var i, vnode, $vnode, $rnode, 
+                $vatt, $ratt, vatts, ratts,
+                $vpp, $rpp, vpps, rpps,
+                $tsl, $vsl, $rsl, vsls, rsls;
+            for(i = 0; i < vnodesCount; i++){
+                
+                vnode = vnodes[i];
+
+                $vnode = $vDOM[vnode];
+                $rnode = $rDOM[vnode];
+
+                //host node will not be managed by this dom
+                if(vnode != VNODE_INDEX_HOST){
+
+                    //The code below seems to be reusable
+                    //and able to be contained by a function,
+                    //yet I am still unsure if function calls
+                    //are faster then procedural code.
+                    //Instead I code it as a high performance
+                    //procedural processing.
+
+                    //No changes will be made to vnodes that
+                    //is currently in storage, as the updates
+                    //buffered at the virtual DOM, we assume
+                    //that no update is lost in the overall
+                    //process and could be applied when the
+                    //vnode got pushed later on
+                    if($vnode.store && $rnode.store)
+                        continue;
+                    //Remove element from view DOM when
+                    //virtual DOM is pointed to store the
+                    //node, updating $rnode.store
+                    if($vnode.store && !$rnode.store){
+                        $rnode.store = true;
+                        continue;
+                    }
+                    //Append element to the view DOM when
+                    //virtual DOM is pointed to push the
+                    //node, updaing $rnode.store
+                    if(!$vnode.store && $rnode.store)
+                        $rnode.store = false;
+
+                    var trace = $vTrace[vnode];
+                    //Attributes stage, apply change to differences,
+                    //Text node exists as we treat text content as 
+                    //an attribute of the text node
+                    var checked = {};
+                    $vatt = $vnode.$attrib;
+                    $ratt = $rnode.$attrib;
+                    vatts = keys($vatt);
+                    ratts = keys($ratt);
+                    var c, att, vval, rval, len = vatts.length;
+                    for(c = 0; c < len; c++){
+                        att = vatts[c];
+                        vval = $vatt[att];
+                        rval = $ratt[att];
+                        if(
+                            att == ATTRIB_STYLE && 
+                            isObject(vval)
+                        ) continue;
+                        checked[att] = true;
+                        if(isUnDef(rval) || vval != rval){
+                            $ratt[att] = vval;
+                            //text content of text node is 
+                            //treated as an attribute, update
+                            //will be happened here
+                            if(att == ATTRIB_TEXT)
+                                trace.textContent = vval;
+                            else
+                                trace.setAttribute(att, vval);
+                        }
+                    }
+                    for(c = 0, len = ratts.length; c < len; c++){
+                        att = ratts[c];
+                        if(
+                            isDef(checked[att]) || 
+                            att == ATTRIB_STYLE
+                        ) continue;
+                        delete $ratt[att];
+                        trace.removeAttribute(att);
+                    }
+
+                    //The process below is only for element nodes
+                    if($vnode.type == VNODE_TYPE_TEXT)
+                        continue;
+
+                    //Properties stage
+                    checked = {};
+                    $vpp = $vnode.$prop;
+                    $rpp = $rnode.$prop;
+                    vpps = keys($vpp);
+                    rpps = keys($rpp);
+                    var pp, len = vpps.length;
+                    for(c = 0; c < len; c++){
+                        pp = vpps[c];
+                        checked[pp] = true;
+                        vval = $vpp[pp];
+                        rval = $rpp[pp];
+                        if(isUnDef(rval) || vval != rval){
+                            $rpp[pp] = vval;
+                            trace[pp] = vval;
+                        }
+                    }
+                    for(c = 0, len = ratts.length; c < len; c++){
+                        pp = rpps[c];
+                        if(isDef(checked[pp]))
+                            continue;
+                        delete $rpp[pp];
+                        delete trace[pp];
+                    }
+
+                    //Css styles stage
+                    checked = {};
+                    $tsl = trace.style;
+                    $vsl = $vatt.$style;
+                    if(isObject($vsl)){
+                        $rsl = $ratt.$style;
+                        if(isUnDef($rsl))
+                            $ratt.$style = $rsl = {};
+                        vsls = keys($vsl);
+                        rsls = keys($rsl);
+                        var sl, len = vsls.length;
+                        for(c = 0; c < len; c++){
+                            sl = vsls[c];
+                            checked[sl] = true;
+                            vval = $vsl[sl];
+                            rval = $rsl[sl];
+                            if(isUnDef(rval) || vval != rval){
+                                $rsl[sl] = vval;
+                                $tsl[sl] = vval;
+                            }
+                        }
+                        for(c = 0, len = rsls.length; c < len; c++){
+                            sl = rsls[c];
+                            if(isDef(checked[sl]))
+                                continue;
+                            delete $rsl[sl];
+                            $tsl[sl] = undefined;
+                        }
+                    }
+
+                    //For implementation of the Css class stage...
+
+                }
+
+                //Check children orders, render differences
+                var vchildren = $vnode.$children;
+                var rchildren = $rnode.$children;
+                len = rchildren.length;
+                var diff$0 = false, rchild, vchild; for(c = 0; c < len; c++){
+                    rchild = rchildren[c];
+                    if(diff$0){
+                        vpull(rchild);
+                        continue;
+                    }
+                    vchild = vchildren[c];
+                    if(isUnDef(vchild) || rchild != vchild){
+                        diff$0 = true;
+                        vpull(rchild);
+                    }
+                }
+                var diff$1 = false; for(c = 0, len = vchildren.length; c < len; c++){
+                    vchild = vchildren[c];
+                    if(diff$1){
+                        vpush(vchild);
+                        continue;
+                    }
+                    rchild = rchildren[c];
+                    if(isUnDef(rchild) || vchild != rchild){
+                        diff$1 = true;
+                        vpush(vchild);
+                    }
+                }
+                
+                if(diff$0 || diff$1)
+                    $rnode.$children = vchildren.slice(0);
+
+            }
+
+            var t2 = performance.now();
+            log('render', 'This rendering took ' + (t2 - t1) + ' milliseconds.');
+
+        }
+
+        MinVDOM.prototype.render = $$render$ParalellShallow;
+
+    }
+
+    function injectVirtualDOMAPI(MinVDOM){
+
+        function $$import($vDOM){
+            if(!isObject($vDOM))
+                warn('VDOMImport', 'The given VirtualDOM is invalid.');
+            this.$vDOM = deepClone($vDOM);
+        }
+
+        function $$export(){
+            return deepClone(this.$rDOM);
+        }
+
+        MinVDOM.prototype.import = $$import;
+        MinVDOM.prototype.export = $$export;
+
+    }
+
+    function createHostNode($mvdom, hostElement){
+        var $host = {
+            store : false,
+            $children : []
+        }
+        $mvdom.$vDOM[VNODE_INDEX_HOST] = deepClone($host);
+        $mvdom.$rDOM[VNODE_INDEX_HOST] = deepClone($host);
+        $mvdom.$vnTrace[VNODE_INDEX_HOST] = hostElement;
+    }
+
+    function MinVDOM(host){
+
+        if(!this instanceof MinVDOM)
+            warn('Constructor', 'Constructor must be called with the new keyword.');
+
+        log('version', MinVDOM.version);
+        this.vnCount = 0;
+        this.$vDOM = {};
+        this.$vnTrace = {};
+        this.$rDOM = {};
+
+        createHostNode(this, host);
+
+    }
+
+    injectVirtualNodeInterface(MinVDOM);
+    injectRenderMethods(MinVDOM);
+    injectVirtualDOMAPI(MinVDOM);
+
+    return MinVDOM;
+
+});

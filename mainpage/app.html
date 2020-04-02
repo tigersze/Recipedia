@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="../css/Min.css">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="icon" type="image/JPG" href="../img/logo.JPG"> 
+        <title>Recipedia</title>
+    </head>
+
+    <style>
+        .margin{
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .tag{
+            float: left;
+            margin: 2px;
+            padding: 2px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .nav-element{
+            float: right;
+        }
+        .blur{
+            -webkit-filter: blur(10px); 
+            -moz-filter: blur(10px);
+            -o-filter: blur(10px); 
+            -ms-filter: blur(10px); 
+            filter: url(#blur); 
+            filter: blur(10px);  
+            filter:progid:DXImageTransform.Microsoft.Blur(PixelRadius='3');
+            -webkit-transition: 2s -webkit-filter linear;
+            -o-transition: 2s -o-filter linear;
+            transition: 2s -o-filter linear;
+        }
+        .click-effect{
+            transition: 0.1s;
+        }
+        .click-effect:active{
+            opacity: 0.7;
+        }
+    </style>
+    <body>
+        <div id="main" class="window">
+            <div id="nav-bar" class="mr d15 screen h1 elevate-4 b:white">
+                <div class="container small">
+                    <div class="mc d15 w8">
+                        <div class="text-bucket medium v-center " style="margin-left: 5px;">
+                            <b id="user-id" style="cursor: pointer" onclick="location.href='../login/login.html'">
+                                Login Now!
+                            </b>
+                        </div>
+                    </div>
+                    <div class="mc d15 w7">
+                        <div class="mc d15 w3 nav-element" style="cursor: pointer" onclick="logout()">
+                            <div class="media-bucket mr d12 h9">
+                                <i class="material-icons" style="font-size: 24px;">power_settings_new</i>
+                            </div>
+                            <div class="text-bucket small mr d12 h3" style="text-align: center;">
+                                <b>Logout</b>
+                            </div>
+                        </div>
+                        <div id="settings-button" name="nav" href="settings" class="mc d15 w3 nav-element">
+                            <div class="media-bucket mr d12 h9">
+                                <i class="material-icons" style="font-size: 24px;">view_headline</i>
+                            </div>
+                            <div class="text-bucket small mr d12 h3" style="text-align: center;">
+                                <b>Settings</b>
+                            </div>
+                        </div>
+                        <div id="upload-button" name="nav" href="upload" class="mc d15 w3 nav-element">
+                            <div class="media-bucket mr d12 h9">
+                                <i class="material-icons" style="font-size: 24px;">publish</i>
+                            </div>
+                            <div class="text-bucket small mr d12 h3" style="text-align: center;">
+                                <b>Upload</b>
+                            </div>
+                        </div>
+                        <div id="search-button" name="nav" href="search" class="mc d15 w3 nav-element">
+                            <div class="media-bucket mr d12 h9">
+                                <i class="material-icons" style="font-size: 24px;">search</i>
+                            </div>
+                            <div class="text-bucket small mr d12 h3" style="text-align: center;">
+                                <b>Search</b>
+                            </div>
+                        </div>
+                        <div id="recipes-button" name="nav" href="recipes" class="mc d15 w3 nav-element">
+                            <div class="media-bucket mr d12 h9">
+                                <i class="material-icons" style="font-size: 24px;">view_list</i>
+                            </div>
+                            <div class="text-bucket small mr d12 h3" style="text-align: center;">
+                                <b>Recipes</b>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mr d15 screen h14 b:#EEE">
+                <div id="display" class="container small animative" style="overflow: visible !important; overflow-x: visable!important; overflow-y: visible!important">  
+                </div>
+            </div>
+            <div id="sub" class="mg b:rgba(0,13,20,0.7)" style="position: absolute; top: 0; z-index: -1; opacity: 0">
+                <div 
+                    id="sub-exit" 
+                    class="media-bucket elevate-4 b:white" 
+                    style="
+                        position: absolute; 
+                        width: 60px; 
+                        height: 60px; 
+                        margin-left: 10px; 
+                        margin-top: 10px; 
+                        border-radius:50%; 
+                        border: 5px solid #666;
+                        cursor: pointer"
+                    onclick="exitSub()">
+                    <i class="material-icons t:#AAA" style="font-size: 32px;">keyboard_arrow_left</i>
+                </div>
+                <div id="sub-container" class="container small">
+                    <div class="mr d15 screen h14 border-5 center b:white" style="border: 5px solid #AAA">
+                        <div class="media-bucket mr d15 h10">
+                            <img id="steps-img" src="">
+                        </div>
+                        <div id="steps-text" class="text-bucket medium mr d15 h5 w13 x1">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="warning" class="window animative b:rgba(0,13,20,0.7)" style="z-index: -1; opacity: 0;" onclick="hideWarning()">
+            <div class="container small">
+                <div class="mg d12 screen h3 center border-5 b:white" style="overflow: hidden; border: 5px solid #666">
+                    <div class="media-bucket mc d12 w4">
+                        <i class="material-icons t:#F1500F" style="font-size: 64px;">
+                            error
+                        </i>
+                    </div>
+                    <div class="mc d12 w7">
+                        <div id="warning-msg" class="text-bucket medium v-center">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="Template.js"></script>
+    <script src="ConfineCrossBrowserText.js"></script>
+    <script src="Colorant.js"></script>
+    <script src="ajax.js"></script>
+    <script src="mvdom$0$2$0.js"></script>
+    <script src="listAPI.js"></script>
+    <script src="templatingEngine.js"></script>
+    <script src="watcher.js"></script>
+    <script src="app.js"></script>
+</html>

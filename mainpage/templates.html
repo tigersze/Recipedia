@@ -1,0 +1,290 @@
+<div 
+    template="sub" 
+    class="window elevate-9" 
+    style="background-color: rgba(0, 0, 0, 0.7);">
+    <div class="container small">
+        <div 
+            id="subDisplay" 
+            class="mg d20 w19 screen h18 center border-5" 
+            style="background-color: white;">
+        </div>
+    </div>
+</div>
+
+<div 
+    template="recipeCard" 
+    class="mg d20 w18 x1 screen h10 h-auto margin elevate-3 border-2" 
+    style="overflow: hidden;">
+    <div 
+        id="imageField" 
+        class="mr d12 screen h7"
+        style="
+            background-color: #EEE;
+            border-bottom: 1px solid #EEEEEE;">
+        <div 
+            id="imageBucket" 
+            class="media-bucket mr d20 h19 v-center">
+            <img id="image">
+        </div>
+    </div>
+    <div 
+        id="bottomBar" 
+        class="mr d12 screen h1" 
+        style="border-bottom: 1px solid #EEEEEE;">
+        <div 
+            id="textColumn" 
+            class="mc d12 w8">
+            <div 
+                id="textField" 
+                class="text-bucket huge d12 x1 v-center">
+            </div>
+        </div>
+        <div 
+            id="likeButton" 
+            class="mc d12 w2">
+            <i 
+                id="likeButtonIcon" 
+                class="material-icons center"
+                style="
+                    font-size: 36px; 
+                    color: #BBB;
+                    cursor: pointer;">
+                thumb_up_alt
+            </i>
+        </div>
+        <div 
+            id="dislikeButton" 
+            class="mc d12 w2">
+            <i 
+                id="dislikeButtonIcon" 
+                class="material-icons center"
+                style="
+                    font-size: 36px; 
+                    color: #BBB;
+                    cursor: pointer">
+                thumb_down_alt
+            </i>
+        </div>
+    </div>
+    <div 
+        id="tagsBar" 
+        class="mr d20 screen h1 h-auto">
+        <div 
+            id="tagsList" 
+            class="mc d15 w14 h-center">
+        </div>
+    </div>
+</div>
+
+<div 
+    template="innerBox" 
+    class="d20 w18 h18 center">
+
+</div>
+
+<div template="collapsible">
+    <div
+        class="mr d15 screen h1 animative border-3"
+        style="cursor:pointer;">
+        <div class="media-bucket mc d12 w1">
+            <i 
+                class="material-icons"
+                style="font-size: 24px;">
+                keyboard_arrow_right
+            </i>
+        </div>
+        <div 
+            class="text-bucket medium v-center d15 x2">
+        </div>
+    </div>
+    <div 
+        class="mr animative" 
+        style="max-height: 0px; overflow: hidden;">
+    </div>
+</div>
+
+<div
+    template="search"
+    class="mr d15 screen h1 margin animative border-3"
+    style="cursor:pointer;background-color: #EEE;">
+    <div class="media-bucket mc d12 w1">
+        <i 
+            class="material-icons"
+            style="font-size: 24px;">
+            add
+        </i>
+    </div>
+    <div 
+        class="text-bucket medium v-center d15 x2">
+    </div>
+</div>
+
+<div
+    template="popular"
+    class="mr d15 screen h1 margin animative border-3"
+    style="cursor:pointer;background-color: #00DAA7!important; color: white; position: sticky!important; top: 10px!important">
+    <div class="media-bucket mc d12 w1">
+        <i 
+            class="material-icons"
+            style="font-size: 24px;">
+            star
+        </i>
+    </div>
+    <div 
+        class="text-bucket medium v-center d15 x2">
+        <b>Most Popular Picks</b>
+    </div>
+</div>
+
+<div   
+    template="checkListItem"
+    class="mr d15 screen h1 margin animative border-3"
+    style="cursor:pointer;background-color: #EEE;"
+    name="tag">
+    <div class="media-bucket mc d12 w1">
+        <i 
+            class="material-icons"
+            style="font-size: 24px;">
+            add
+        </i>
+    </div>
+    <div 
+        class="text-bucket medium v-center d15 x2">
+    </div>
+</div>
+
+<!-- Setting html -->
+<div template="setting" class="container-fluid" style="width: 100%">
+    <div align="center"><img style="width: 50%; height: 50%; margin-top: 70px"
+        id="profile-image" class="img-circle img-responsive" >
+        <br><center><h id="message" style="font-size: 20px ; color: green"></h></center>
+        <br>
+    </div>
+    <div class="col-sm-6">
+        <h4 style="color:#00b1b1;"> Name of Person </h4></span>
+        First name: <input type="text" name="first_name" id="first_name"><span id = "fspan"></span><br><br>
+        Last name: <input type="text" name="last_name" id="last_name"><span id = "lspan"></span><br><br>
+        Age: <input type="text" name="age" id="age"><span id = "agespan"></span><br><br>
+        Prefered dish category: <select class="form-control" id="prefer_category" name="prefer_category" required="required">
+                    <option>--Options--</option>
+                    <option>Chinese</option>
+                    <option>Western</option>
+                    <option>Italian</option>
+                    <option>Japanese</option>
+                    <option>Thai</option>
+                    <option>Vietnamese</option>
+                    <option>Others</option>
+                </select><br><br>
+        <label class="mr-2">Upload your profile picture:</label>
+            <input id="fileToUpload" type="file" name="fileToUpload" id="fileToUpload"><br><br>
+            <center><button value="Submit" style="width:60px;height:30px;" onclick="upload_profile()">save</button></center>
+       <span><p>Title</p></span>
+    </div>
+    <div class="clearfix"></div>
+    <hr style="margin:5px 0 5px 0;">
+    <div class="col-sm-5 col-xs-6 tital ">Info</div>
+    <div class="col-sm-7 col-xs-6 ">Info</div>
+    <div class="clearfix"></div>
+    <div class="bot-border"></div>
+</div>
+
+
+<!-- Upload  html -->
+<div template="upload" class="container-fluid" style="width: 100%">
+<div class="col-sm-6">
+    <br>
+    <h1>Upload your recipe</h1><hr><br><span id="response" style="font size: 25px ; color: green"></span>
+            <div class="form-group">
+                <label for="dish_name" required="required">Dish name</label>
+                <input type="text" name="dish" id="dish" class="form-control">
+            </div></br>
+
+            <div class="form-group">
+                <label for="category">Dish Category</label>
+                <select class="form-control" id="category" name="category" required="required">
+                    <option>--Options--</option>
+                    <option>Chinese</option>
+                    <option>Western</option>
+                    <option>Italian</option>
+                    <option>Japanese</option>
+                    <option>Thai</option>
+                    <option>Vietnamese</option>
+                    <option>Others</option>
+                </select>
+            </div><hr>
+            <p>
+            <label>5 main ingredients:</label><br><br>
+            Ingredient 1: <input type="text" name="in1" id="in1">
+            Type of Ingredient: <select class="form-control" id="intype1" name="intype1" required="required">
+                    <option>--Options--</option>                  
+                    <option>Dairy</option>
+                    <option>Eggs</option>
+                    <option>Herbs & Spices</option>
+                    <option>Meat</option>
+                    <option>Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Others</option> 
+                    <option>Null</option>                  
+                </select><br><br>
+            Ingredient 2: <input type="text" name="in2" id="in2">
+            Type of Ingredient:  <select class="form-control" id="intype2" name="intype2" required="required">
+                    <option>--Options--</option>                  
+                    <option>Dairy</option>
+                    <option>Eggs</option>
+                    <option>Herbs & Spices</option>
+                    <option>Meat</option>
+                    <option>Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Others</option> 
+                    <option>Null</option> 
+                </select><br><br>
+            Ingredient 3: <input type="text" name="in3" id="in3">
+            Type of Ingredient:  <select class="form-control" id="intype3" name="intype3" required="required">
+                    <option>--Options--</option>                  
+                    <option>Dairy</option>
+                    <option>Eggs</option>
+                    <option>Herbs & Spices</option>
+                    <option>Meat</option>
+                    <option>Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Others</option> 
+                    <option>Null</option>               
+                </select><br><br>
+                Ingredient 4: <input type="text" name="in4" id="in4">
+            Type of Ingredient: <select class="form-control" id="intype4" name="intype4" required="required">      
+                    <option>--Options--</option>                  
+                    <option>Dairy</option>
+                    <option>Eggs</option>
+                    <option>Herbs & Spices</option>
+                    <option>Meat</option>
+                    <option>Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Others</option>  
+                    <option>Null</option>               
+                </select><br><br>
+                Ingredient 5: <input type="text" name="in5" id="in5">
+            Type of Ingredient: <select class="form-control" id="intype5" name="intype5" required="required">
+                    <option>--Options--</option>                  
+                    <option>Dairy</option>
+                    <option>Eggs</option>
+                    <option>Herbs & Spices</option>
+                    <option>Meat</option>
+                    <option>Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Others</option> 
+                    <option>Null</option>                   
+                </select><br><br>
+            </p><hr>
+
+            <div class="form-group">
+                <textarea class="form-control" rows="5" id="steps" name ="steps" placeholder="Steps & ingredients quantity: "></textarea>
+            </div></br><hr>
+            <div class="form-group mt-3">
+            <label class="mr-2">Upload dish picture:</label>
+            <input type="file" name="fileToUpload" id="fileToUpload">
+            </div></br></br></br>
+            <center><button value="Submit" style="width:60px;height:30px;" onclick="upload_recipe()">Submit</button></center>
+    </div>
+</div>
+
+
